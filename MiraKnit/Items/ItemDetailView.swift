@@ -43,9 +43,15 @@ struct ItemDetailView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(item.title ?? "Untitled")
-                    .font(.title)
-                    .fontWeight(.bold)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.title ?? "Untitled")
+                        .font(.title)
+                        .fontWeight(.bold)
+
+                    Link(item.link.absoluteString, destination: item.link)
+                        .font(.caption)
+                        .foregroundStyle(.blue)
+                }
 
                 Spacer()
 
