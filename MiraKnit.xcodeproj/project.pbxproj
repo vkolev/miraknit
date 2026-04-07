@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		75EBC74F2F7E7CE1007AAD26 /* ColorSelector in Frameworks */ = {isa = PBXBuildFile; productRef = 75EBC74E2F7E7CE1007AAD26 /* ColorSelector */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		75EBC7302F7E3492007AAD26 /* MiraKnit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MiraKnit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				75EBC74F2F7E7CE1007AAD26 /* ColorSelector in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = MiraKnit;
 			packageProductDependencies = (
+				75EBC74E2F7E7CE1007AAD26 /* ColorSelector */,
 			);
 			productName = MiraKnit;
 			productReference = 75EBC7302F7E3492007AAD26 /* MiraKnit.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 75EBC7272F7E3492007AAD26;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				75EBC74D2F7E7CE1007AAD26 /* XCRemoteSwiftPackageReference "ColorSelector" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 75EBC7312F7E3492007AAD26 /* Products */;
 			projectDirPath = "";
@@ -254,10 +263,9 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8LR2463F33;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -286,10 +294,9 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8LR2463F33;
-				ENABLE_APP_SANDBOX = YES;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -331,6 +338,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		75EBC74D2F7E7CE1007AAD26 /* XCRemoteSwiftPackageReference "ColorSelector" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jaywcjlove/ColorSelector.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		75EBC74E2F7E7CE1007AAD26 /* ColorSelector */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 75EBC74D2F7E7CE1007AAD26 /* XCRemoteSwiftPackageReference "ColorSelector" */;
+			productName = ColorSelector;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 75EBC7282F7E3492007AAD26 /* Project object */;
 }

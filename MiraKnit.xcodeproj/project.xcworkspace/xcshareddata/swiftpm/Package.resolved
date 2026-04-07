@@ -1,0 +1,15 @@
+{
+  "originHash" : "b4ce97242418dfe5e6cd84a193c1aeb88765de034f2d2a3ff5a0bebdc969d72b",
+  "pins" : [
+    {
+      "identity" : "colorselector",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jaywcjlove/ColorSelector.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "daf00a627eb487c3f206eceb2e71d1e5c5a726ac"
+      }
+    }
+  ],
+  "version" : 3
+}
