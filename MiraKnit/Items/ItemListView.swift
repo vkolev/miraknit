@@ -10,6 +10,7 @@ import SwiftData
 
 struct ItemListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(DeepLinkManager.self) private var deepLinkManager
     @Query private var items: [Item]
     @State private var searchText = ""
     @State private var selectedItemID: Item.ID?
@@ -29,7 +30,7 @@ struct ItemListView: View {
                 .onDelete(perform: deleteItems)
             }
             .searchable(text: $searchText, prompt: "Search...")
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 250)
             .toolbar {
                 ToolbarItem {
                     Button { isAddingItem = true } label: {
@@ -54,6 +55,14 @@ struct ItemListView: View {
                 ItemDetailView(item: item)
             } else {
                 Text("Select an item")
+            }
+        }
+        .onChange(of: deepLinkManager.pendingURL) {
+            if let url = deepLinkManager.pendingURL {
+                newItemURL = url.absoluteString
+                newItemTitle = ""
+                isAddingItem = true
+                deepLinkManager.pendingURL = nil
             }
         }
         .sheet(isPresented: $isAddingItem) {

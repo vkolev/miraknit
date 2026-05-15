@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  MiraKnit
-//
-//  Created by Vladimir Kolev on 02.04.26.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -14,6 +7,7 @@ enum DataCategory: String, CaseIterable {
 }
 
 struct ContentView: View {
+    @Environment(DeepLinkManager.self) private var deepLinkManager
     @State private var selectedCategory: DataCategory = .items
 
     var body: some View {
@@ -39,10 +33,16 @@ struct ContentView: View {
                 MaterialListView()
             }
         }
+        .onChange(of: deepLinkManager.pendingURL) {
+            if deepLinkManager.pendingURL != nil {
+                selectedCategory = .items
+            }
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .environment(DeepLinkManager())
         .modelContainer(for: [Item.self, Material.self, MaterialTransaction.self], inMemory: true)
 }

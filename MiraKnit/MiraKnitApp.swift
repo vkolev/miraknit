@@ -1,15 +1,10 @@
-//
-//  MiraKnitApp.swift
-//  MiraKnit
-//
-//  Created by Vladimir Kolev on 02.04.26.
-//
-
 import SwiftUI
 import SwiftData
 
 @main
 struct MiraKnitApp: App {
+    @State private var deepLinkManager = DeepLinkManager()
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
@@ -28,11 +23,26 @@ struct MiraKnitApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(deepLinkManager)
+                .onOpenURL { url in
+                    handleDeepLink(url)
+                }
         }
         .modelContainer(sharedModelContainer)
 
         Settings {
             SettingsView()
         }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "miraknit",
+              url.host == "add",
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let urlString = components.queryItems?.first(where: { $0.name == "url" })?.value,
+              let videoURL = URL(string: urlString)
+        else { return }
+
+        deepLinkManager.pendingURL = videoURL
     }
 }

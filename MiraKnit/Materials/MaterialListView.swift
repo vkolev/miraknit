@@ -35,7 +35,7 @@ struct MaterialListView: View {
                 .onDelete(perform: deleteMaterials)
             }
             .searchable(text: $searchText, prompt: "Search...")
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            .navigationSplitViewColumnWidth(min: 250, ideal: 250)
             .toolbar {
                 ToolbarItem {
                     Button { isAddingMaterial = true } label: {
