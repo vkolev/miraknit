@@ -10,7 +10,7 @@ import SwiftData
 
 struct ItemListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(filter: #Predicate<Item> { $0.isDownloading == false }) private var items: [Item]
+    @Query private var items: [Item]
     @State private var searchText = ""
     @State private var selectedItemID: Item.ID?
     @State private var isAddingItem = false
@@ -91,11 +91,13 @@ struct ItemListView: View {
 
     private func addItem() {
         guard let url = URL(string: newItemURL) else { return }
-        let newItem = Item(timestamp: Date(), link: url)
+        let cleanedURL = cleanedYouTubeURL(url) ?? url
+        let newItem = Item(timestamp: Date(), link: cleanedURL)
         newItem.title = newItemTitle.isEmpty ? nil : newItemTitle
         withAnimation {
             modelContext.insert(newItem)
         }
+        selectedItemID = newItem.id
         isAddingItem = false
         newItemTitle = ""
         newItemURL = ""
@@ -121,12 +123,35 @@ struct ItemListView: View {
                     item.isDownloading = false
                 }
             } catch {
-                print("Download failed: \(error.localizedDescription)")
                 await MainActor.run {
+                    item.downloadError = error.localizedDescription
                     item.isDownloading = false
                 }
             }
         }
+    }
+
+    private func cleanedYouTubeURL(_ url: URL) -> URL? {
+        var videoID: String?
+
+        if url.host?.contains("youtu.be") == true {
+            videoID = url.pathComponents.dropFirst().first
+        } else if url.host?.contains("youtube.com") == true {
+            if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+               let value = components.queryItems?.first(where: { $0.name == "v" })?.value,
+               !value.isEmpty {
+                videoID = value
+            } else {
+                let path = url.pathComponents
+                if let idx = path.firstIndex(where: { $0 == "embed" || $0 == "shorts" }),
+                   idx + 1 < path.count {
+                    videoID = path[idx + 1]
+                }
+            }
+        }
+
+        guard let videoID else { return nil }
+        return URL(string: "https://www.youtube.com/watch?v=\(videoID)")
     }
 
     private func deleteItems(offsets: IndexSet) {

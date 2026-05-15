@@ -12,7 +12,15 @@ struct ItemRowView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            if let thumbnailData = item.thumbnail,
+            if item.isDownloading {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(.quaternary)
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+            } else if let thumbnailData = item.thumbnail,
                let nsImage = NSImage(data: thumbnailData) {
                 Image(nsImage: nsImage)
                     .resizable()

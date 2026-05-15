@@ -29,7 +29,7 @@ struct PlayerView: NSViewRepresentable {
 // MARK: - Detail View
 
 struct ItemDetailView: View {
-    let item: Item
+    @Bindable var item: Item
 
     @State private var player: AVPlayer?
     @State private var isPlaying = false
@@ -37,6 +37,7 @@ struct ItemDetailView: View {
     @State private var volume: Float = 1.0
     @State private var isEditing = false
     @State private var isBuildingThis = false
+    @State private var showDownloadError = false
 
     private let speeds: [Float] = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 
@@ -69,7 +70,15 @@ struct ItemDetailView: View {
             }
             .padding(20)
 
-            if let player {
+            if item.isDownloading {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .controlSize(.large)
+                    Text("Downloading video…")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let player {
                 PlayerView(player: player)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -164,6 +173,21 @@ struct ItemDetailView: View {
         .sheet(isPresented: $isBuildingThis) {
             UseMaterialsView(item: item)
         }
+        .onChange(of: item.isDownloading) {
+            if !item.isDownloading && item.downloadError == nil {
+                setupPlayer()
+            }
+        }
+        .onChange(of: item.downloadError) {
+            showDownloadError = item.downloadError != nil
+        }
+        .alert("Download Failed", isPresented: $showDownloadError) {
+            Button("OK") {
+                item.downloadError = nil
+            }
+        } message: {
+            Text(item.downloadError ?? "An unknown error occurred.")
+        }
         .sheet(isPresented: $isEditing) {
             ItemEditView(item: item)
         }
@@ -181,7 +205,8 @@ struct ItemDetailView: View {
     }
 
     private func setupPlayer() {
-        guard let videoURL = item.videoFilePath,
+        guard !item.isDownloading,
+              let videoURL = item.videoFilePath,
               FileManager.default.fileExists(atPath: videoURL.path) else {
             player = nil
             return

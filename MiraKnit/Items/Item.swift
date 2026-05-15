@@ -15,6 +15,7 @@ final class Item {
     var content: String?
     var timestamp: Date
     var isDownloading: Bool = true
+    var downloadError: String?
     @Attribute(.externalStorage) var thumbnail: Data?
     
     init(timestamp: Date, link: URL) {
