@@ -38,6 +38,15 @@ struct ItemDetailView: View {
     @State private var isEditing = false
     @State private var isBuildingThis = false
     @State private var showDownloadError = false
+    @State private var currentTime: Double = 0
+    @State private var duration: Double = 0
+    @State private var isScrubbing = false
+    @State private var timeObserverToken: Any?
+    @State private var isDetached = false
+    @State private var detachedWindow: NSWindow?
+    @State private var detachedEventMonitor: Any?
+    @State private var playerStatusObserver: NSKeyValueObservation?
+    @FocusState private var keyboardFocused: Bool
 
     private let speeds: [Float] = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 
@@ -79,8 +88,57 @@ struct ItemDetailView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let player {
-                PlayerView(player: player)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Group {
+                    if isDetached {
+                        VStack(spacing: 12) {
+                            Image(systemName: "rectangle.on.rectangle")
+                                .font(.system(size: 40))
+                                .foregroundStyle(.secondary)
+                            Text("Playing in separate window")
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(NSColor.windowBackgroundColor))
+                    } else {
+                        PlayerView(player: player)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .topTrailing) {
+                    Button {
+                        if isDetached {
+                            reattachPlayer()
+                        } else {
+                            detachPlayer(player: player)
+                        }
+                    } label: {
+                        Image(systemName: isDetached ? "pip.exit" : "pip.enter")
+                            .font(.title3)
+                            .foregroundStyle(.white)
+                            .padding(8)
+                            .background(.black.opacity(0.55), in: Circle())
+                    }
+                    .buttonStyle(.borderless)
+                    .padding(12)
+                    .help(isDetached ? "Embed player" : "Open in separate window")
+                }
+
+                // Progress bar
+                Slider(
+                    value: $currentTime,
+                    in: 0...max(duration, 0.001),
+                    onEditingChanged: { editing in
+                        isScrubbing = editing
+                        if !editing {
+                            let newTime = CMTime(seconds: currentTime, preferredTimescale: 600)
+                            player.seek(to: newTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                            keyboardFocused = true
+                        }
+                    }
+                )
+                .disabled(duration <= 0)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
 
                 // Playback controls
                 HStack(spacing: 16) {
@@ -121,6 +179,7 @@ struct ItemDetailView: View {
                             .frame(width: 80)
                             .onChange(of: volume) {
                                 player.volume = volume
+                                keyboardFocused = true
                             }
                     }
 
@@ -138,6 +197,7 @@ struct ItemDetailView: View {
                         if isPlaying {
                             player.rate = playbackSpeed
                         }
+                        keyboardFocused = true
                     }
                 }
                 .padding(.horizontal, 20)
@@ -163,10 +223,30 @@ struct ItemDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .focusable()
+        .focused($keyboardFocused)
+        .focusEffectDisabled()
+        .onKeyPress(.space) {
+            togglePlayPause()
+            return .handled
+        }
+        .onKeyPress(.leftArrow) {
+            skip(by: -5)
+            return .handled
+        }
+        .onKeyPress(.rightArrow) {
+            skip(by: 5)
+            return .handled
+        }
         .task(id: item.id) {
             setupPlayer()
+            keyboardFocused = true
         }
         .onDisappear {
+            closeDetachedWindow()
+            removeTimeObserver()
+            playerStatusObserver?.invalidate()
+            playerStatusObserver = nil
             player?.pause()
             player = nil
         }
@@ -205,6 +285,10 @@ struct ItemDetailView: View {
     }
 
     private func setupPlayer() {
+        closeDetachedWindow()
+        removeTimeObserver()
+        playerStatusObserver?.invalidate()
+        playerStatusObserver = nil
         guard !item.isDownloading,
               let videoURL = item.videoFilePath,
               FileManager.default.fileExists(atPath: videoURL.path) else {
@@ -216,16 +300,47 @@ struct ItemDetailView: View {
         newPlayer.volume = volume
         player = newPlayer
         isPlaying = false
+        currentTime = 0
+        duration = 0
+        addPeriodicTimeObserver(to: newPlayer)
+        playerStatusObserver = newPlayer.observe(\.timeControlStatus, options: [.new]) { observed, _ in
+            DispatchQueue.main.async {
+                isPlaying = observed.timeControlStatus != .paused
+            }
+        }
+        Task { @MainActor in
+            if let assetDuration = try? await newPlayer.currentItem?.asset.load(.duration) {
+                let seconds = assetDuration.seconds
+                if seconds.isFinite {
+                    duration = seconds
+                }
+            }
+        }
+    }
+
+    private func addPeriodicTimeObserver(to player: AVPlayer) {
+        let interval = CMTime(seconds: 0.1, preferredTimescale: 600)
+        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
+            if !isScrubbing {
+                currentTime = time.seconds
+            }
+        }
+    }
+
+    private func removeTimeObserver() {
+        if let token = timeObserverToken, let player {
+            player.removeTimeObserver(token)
+        }
+        timeObserverToken = nil
     }
 
     private func togglePlayPause() {
         guard let player else { return }
-        if isPlaying {
-            player.pause()
-        } else {
+        if player.timeControlStatus == .paused {
             player.rate = playbackSpeed
+        } else {
+            player.pause()
         }
-        isPlaying.toggle()
     }
 
     private func skip(by seconds: Double) {
@@ -235,5 +350,64 @@ struct ItemDetailView: View {
             preferredTimescale: currentTime.timescale
         )
         player.seek(to: newTime, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    private func detachPlayer(player: AVPlayer) {
+        let rootView = PlayerView(player: player)
+        let hostingController = NSHostingController(rootView: rootView)
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = item.title ?? "Player"
+        window.setContentSize(NSSize(width: 800, height: 600))
+        window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { _ in
+            isDetached = false
+            detachedWindow = nil
+            if let monitor = detachedEventMonitor {
+                NSEvent.removeMonitor(monitor)
+                detachedEventMonitor = nil
+            }
+        }
+
+        detachedEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard event.window === window else { return event }
+            switch event.keyCode {
+            case 49: // space
+                togglePlayPause()
+                return nil
+            case 123: // left arrow
+                skip(by: -5)
+                return nil
+            case 124: // right arrow
+                skip(by: 5)
+                return nil
+            default:
+                return event
+            }
+        }
+
+        detachedWindow = window
+        isDetached = true
+    }
+
+    private func reattachPlayer() {
+        closeDetachedWindow()
+    }
+
+    private func closeDetachedWindow() {
+        detachedWindow?.close()
+        detachedWindow = nil
+        isDetached = false
+        if let monitor = detachedEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            detachedEventMonitor = nil
+        }
     }
 }
